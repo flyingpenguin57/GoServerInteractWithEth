@@ -4,14 +4,27 @@ import (
 	"bubble/dao"
 	"bubble/models"
 	"bubble/routers"
+	"bubble/service"
 	"bubble/setting"
 	"fmt"
+	"log"
 	"os"
+	"time"
 )
 
 const defaultConfFile = "./conf/config.ini"
 
 func main() {
+	log.Println("连接以太坊客户端")
+	//连接以太坊客户端
+	blockChain.InitEthClient()
+
+	//开启定时任务
+	go startSchedule()
+
+	//监听transfer事件
+	go blockChain.QueryTransferInfoFromBlockChain()
+
 	confFile := defaultConfFile
 	if len(os.Args) > 2 {
 		fmt.Println("use specified conf file: ", os.Args[1])
@@ -39,5 +52,17 @@ func main() {
 	r := routers.SetupRouter()
 	if err := r.Run(fmt.Sprintf(":%d", setting.Conf.Port)); err != nil {
 		fmt.Printf("server startup failed, err:%v\n", err)
+	}
+}
+
+func startSchedule() {
+	log.Println("开启定时任务")
+	ticker := time.NewTicker(15 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			fmt.Println("执行定时任务")
+			blockChain.QueryLatestBlockFromChain()
+		}
 	}
 }
